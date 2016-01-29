@@ -7,4 +7,5 @@ public class DisplayItem {
     public String title;
     public String imageAddr;
     public String description;
+    public CustomAdapter.Holder holder;
 }

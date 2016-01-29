@@ -7,12 +7,14 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.BaseAdapter;
+import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -26,16 +28,19 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 
-public class CustomAdapter extends BaseAdapter {
+public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollListener{
 
     private final Activity activity;
-
+    private Thread thread;
+    private DownloadTask dTask;
 
     private  ArrayList<DisplayItem> displayItems;
     String [] result;
     Context context;
     int [] imageId;
     private static LayoutInflater inflater=null;
+    private int firstVisibleItem,visibleItemCount;
+    private ArrayList<AsyncTask> asyncTasks;
 
 
     public CustomAdapter(MainActivity mainActivity, ArrayList<DisplayItem> displayItems) {
@@ -45,6 +50,21 @@ public class CustomAdapter extends BaseAdapter {
 
 
 
+
+    }
+
+
+    public CustomAdapter(MainActivity mainActivity) {
+
+        this.activity=mainActivity;
+        inflater = ( LayoutInflater )activity.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        displayItems = new ArrayList<DisplayItem>();
+        asyncTasks = new ArrayList<AsyncTask>();
+
+        dTask = new DownloadTask();
+        thread = new Thread(dTask);
+
+        thread.start();
 
     }
 
@@ -74,6 +94,8 @@ public class CustomAdapter extends BaseAdapter {
         return position;
     }
 
+
+
     public class Holder
     {
         TextView tv;
@@ -99,38 +121,10 @@ public class CustomAdapter extends BaseAdapter {
         final DisplayItem displayItem = displayItems.get(position);
         holder.tv.setText(displayItem.description);
         holder.titleView.setText(displayItem.title);
+        displayItem.holder = holder;
 
-        AsyncTask<Void,Void,Void> imageTask = new AsyncTask<Void, Void, Void>() {
-            Bitmap bmp = null;
 
-            @Override
-            protected Void doInBackground(Void... params) {
-                try {
-                    URL url = new URL(displayItem.imageAddr);
-                    bmp = BitmapFactory.decodeStream(url.openConnection().getInputStream());
 
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                return null;
-
-            }
-
-            @Override
-            protected void onPostExecute(Void aVoid) {
-                super.onPostExecute(aVoid);
-                holder.img.setImageBitmap(bmp);
-
-            }
-        };
-
-        if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB ) {
-            imageTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-
-          //  imageTask.execute();
-        } else {
-            imageTask.execute();
-        }
      //   holder.img.setImageURI(Uri.parse(displayItems.get(position).image));
 
         rowView.setOnClickListener(new OnClickListener() {
@@ -147,6 +141,171 @@ public class CustomAdapter extends BaseAdapter {
     }
 
 
+    public class DownloadTask implements Runnable {
 
+        @Override
+        public void run() {
+
+            URL url;
+            HttpURLConnection urlConnection = null;
+            String res = "";
+
+            try {
+                url = new URL("https://gist.githubusercontent.com/maclir/f715d78b49c3b4b3b77f/raw/8854ab2fe4cbe2a5919cea97d71b714ae5a4838d/items.json");
+                urlConnection = (HttpURLConnection) url.openConnection();
+                InputStream in = urlConnection.getInputStream();
+                InputStreamReader isw = new InputStreamReader(in);
+
+                isw.read(); //removing first character
+                int data = isw.read();
+                int ctr=0;
+
+                while (data != -1) {
+                    char current = (char) data;
+
+                    res += current;
+                    if(current=='}'){
+                        ctr++;
+                        JSONObject jsonObj = new JSONObject(res);
+                        DisplayItem displayItem = new DisplayItem();
+                        displayItem.title = jsonObj.getString("title");
+                        displayItem.imageAddr =  jsonObj.getString("image");
+                        displayItem.description = jsonObj.getString("description");
+                        displayItems.add(displayItem);
+                        // CustomAdapter.this.notifyDataSetChanged();
+                        Runnable updateView = new Runnable() {
+                            @Override
+                            public void run() {
+                                CustomAdapter.this.notifyDataSetChanged();
+                            }
+                        };
+                        activity.runOnUiThread(updateView);
+                        res="";
+                        isw.read(); //removing ','
+
+                    }
+                    data = isw.read();
+                    if(ctr==10){
+                        ctr=0;
+                        synchronized (dTask) {
+                            dTask.wait();
+                        }
+                    }
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+
+                if (urlConnection != null) {
+                    urlConnection.disconnect();
+                }
+            }
+
+        }
+
+
+    }
+
+
+
+
+         class  ImageTask extends AsyncTask <Void,Void,Void> {
+
+             int pos = -1;
+             Bitmap bmp = null;
+
+             public ImageTask(int pos) {
+                 this.pos = pos;
+             }
+
+             @Override
+             protected Void doInBackground(Void... params) {
+                 try {
+                     URL url = new URL(displayItems.get(pos).imageAddr);
+                     bmp = BitmapFactory.decodeStream(url.openConnection().getInputStream());
+
+                 } catch (IOException e) {
+                     e.printStackTrace();
+                 }
+                 return null;
+
+             }
+
+             @Override
+             protected void onPostExecute(Void aVoid) {
+                 super.onPostExecute(aVoid);
+                 displayItems.get(pos).holder.img.setImageBitmap(bmp);
+
+
+             }
+
+
+         };
+
+
+
+
+
+
+    @Override
+    public void onScrollStateChanged(AbsListView view, int scrollState) {
+
+
+        int i=0,j  =  0;
+        int position = 0;
+
+
+        if(scrollState == SCROLL_STATE_IDLE) {
+            synchronized (dTask) {
+
+                dTask.notify();
+
+                while (i<visibleItemCount ){
+                     position = firstVisibleItem+i;
+                    if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB ) {
+                        AsyncTask<Void, Void, Void> asyncTask = new ImageTask(position);
+                        asyncTask.execute();
+                        asyncTasks.add(asyncTask);
+
+
+
+                    } else {
+                        AsyncTask<Void, Void, Void> asyncTask = new ImageTask(position);
+                        asyncTask.execute();
+                        asyncTasks.add(asyncTask);
+                    }
+                    Log.i("start",""+ i);
+                    i++;
+                }
+            }
+
+        }
+
+        if(scrollState==SCROLL_STATE_FLING){
+             j=0;
+            while(j<asyncTasks.size()){
+                asyncTasks.get(j).cancel(true);
+                Log.i("stop", "" + j);
+                j++;
+            }
+            Log.i("scroll", "fling");
+        }
+        if(scrollState==SCROLL_STATE_TOUCH_SCROLL){
+            Log.i("scroll", "touch");
+        }
+    }
+
+
+
+
+    @Override
+    public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
+        this.firstVisibleItem = firstVisibleItem;
+        this.visibleItemCount=visibleItemCount;
+
+
+
+    }
 
 }
