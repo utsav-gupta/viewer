@@ -173,6 +173,7 @@ public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollLi
                         displayItem.imageAddr =  jsonObj.getString("image");
                         displayItem.description = jsonObj.getString("description");
                         displayItems.add(displayItem);
+                        Log.i("Downloaded Item:",""+displayItems.size());
                         // CustomAdapter.this.notifyDataSetChanged();
                         Runnable updateView = new Runnable() {
                             @Override
@@ -211,38 +212,7 @@ public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollLi
 
 
 
-         class  ImageTask extends AsyncTask <Void,Void,Void> {
 
-             int pos = -1;
-             Bitmap bmp = null;
-
-             public ImageTask(int pos) {
-                 this.pos = pos;
-             }
-
-             @Override
-             protected Void doInBackground(Void... params) {
-                 try {
-                     URL url = new URL(displayItems.get(pos).imageAddr);
-                     bmp = BitmapFactory.decodeStream(url.openConnection().getInputStream());
-
-                 } catch (IOException e) {
-                     e.printStackTrace();
-                 }
-                 return null;
-
-             }
-
-             @Override
-             protected void onPostExecute(Void aVoid) {
-                 super.onPostExecute(aVoid);
-                 displayItems.get(pos).holder.img.setImageBitmap(bmp);
-
-
-             }
-
-
-         };
 
 
 
@@ -253,45 +223,32 @@ public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollLi
     public void onScrollStateChanged(AbsListView view, int scrollState) {
 
 
-        int i=0,j  =  0;
-        int position = 0;
 
+            int ctr = 0;
+            int start = firstVisibleItem;
+            while (ctr < visibleItemCount) {
+                if(scrollState == SCROLL_STATE_IDLE) {
 
-        if(scrollState == SCROLL_STATE_IDLE) {
-            synchronized (dTask) {
+                        displayItems.get(start).startDownloadingImage();
+                        Log.i("start downloading image", " Position:" + start + ",pool size:" + ctr);
 
-                dTask.notify();
-            }
-
-                while (i<visibleItemCount ){
-                     position = firstVisibleItem+i;
-                    if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB ) {
-                        AsyncTask<Void, Void, Void> asyncTask = new ImageTask(position);
-                        asyncTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-                                asyncTasks.add(asyncTask);
-
-
-
-                    } else {
-                        AsyncTask<Void, Void, Void> asyncTask = new ImageTask(position);
-                        asyncTask.execute();
-                        asyncTasks.add(asyncTask);
-                    }
-                    Log.i("start",""+ i);
-                    i++;
                 }
-
-
-        }
-        else {
-            j = 0;
-            while (j < asyncTasks.size()) {
-                asyncTasks.get(j).cancel(true);
-
-                Log.i("stop", "" + j);
-                j++;
+                else {
+                    synchronized (dTask){
+                        dTask.notify();
+                    }
+                    displayItems.get(start).stopDownladingImage();
+                    Log.i("stop downloading image", " Position:"+start+",pool size:"+(visibleItemCount-ctr));
+                }
+                ctr++;
+                start++;
             }
-        }
+
+
+
+
+
+
     }
 
 
