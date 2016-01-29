@@ -27,6 +27,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.concurrent.ThreadPoolExecutor;
 
 public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollListener{
 
@@ -260,13 +261,14 @@ public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollLi
             synchronized (dTask) {
 
                 dTask.notify();
+            }
 
                 while (i<visibleItemCount ){
                      position = firstVisibleItem+i;
                     if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB ) {
                         AsyncTask<Void, Void, Void> asyncTask = new ImageTask(position);
-                        asyncTask.execute();
-                        asyncTasks.add(asyncTask);
+                        asyncTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+                                asyncTasks.add(asyncTask);
 
 
 
@@ -278,21 +280,17 @@ public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollLi
                     Log.i("start",""+ i);
                     i++;
                 }
-            }
+
 
         }
-
-        if(scrollState==SCROLL_STATE_FLING){
-             j=0;
-            while(j<asyncTasks.size()){
+        else {
+            j = 0;
+            while (j < asyncTasks.size()) {
                 asyncTasks.get(j).cancel(true);
+
                 Log.i("stop", "" + j);
                 j++;
             }
-            Log.i("scroll", "fling");
-        }
-        if(scrollState==SCROLL_STATE_TOUCH_SCROLL){
-            Log.i("scroll", "touch");
         }
     }
 
