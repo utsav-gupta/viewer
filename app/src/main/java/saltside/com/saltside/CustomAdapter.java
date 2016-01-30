@@ -123,9 +123,21 @@ public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollLi
         holder.tv.setText(displayItem.description);
         holder.titleView.setText(displayItem.title);
         displayItem.holder = holder;
+        if(firstVisibleItem==0) {  //if the view is loaded for the first time and not yet scrolled
+
+                displayItems.get(position).startDownloadingImage();
+                Log.i("start downloading image", " Position:" + position + ",pool size:" + position);
 
 
+        }
 
+        if(position==displayItems.size()-10) {//if list is nearing end start download items
+
+            synchronized (dTask) {
+                dTask.notify();
+            }
+
+        }
      //   holder.img.setImageURI(Uri.parse(displayItems.get(position).image));
 
         rowView.setOnClickListener(new OnClickListener() {
@@ -192,6 +204,7 @@ public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollLi
                         synchronized (dTask) {
                             dTask.wait();
                         }
+
                     }
                 }
 
@@ -230,7 +243,7 @@ public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollLi
                 if(scrollState == SCROLL_STATE_IDLE) {
 
                         displayItems.get(start).startDownloadingImage();
-                    Log.i("start downloading image", " Position:" + start + ",pool size:" + ctr);
+                        Log.i("start downloading image", " Position:" + start + ",pool size:" + ctr);
 
                 }
                 else {
@@ -248,9 +261,6 @@ public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollLi
 
 
 
-    }
-
-    private void startDownloadingImages(){
 
     }
 

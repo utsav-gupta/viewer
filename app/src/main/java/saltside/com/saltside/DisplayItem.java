@@ -5,7 +5,9 @@ import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.os.Build;
 
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 
 /**
@@ -55,6 +57,8 @@ public class DisplayItem {
             try {
                 URL url = new URL(imageAddr);
                 bmp = BitmapFactory.decodeStream(url.openConnection().getInputStream());
+                bmp = Bitmap.createScaledBitmap(bmp, 100, 100, false);
+
 
             } catch (IOException e) {
                 e.printStackTrace();
