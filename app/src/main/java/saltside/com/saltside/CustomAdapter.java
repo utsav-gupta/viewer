@@ -230,7 +230,7 @@ public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollLi
                 if(scrollState == SCROLL_STATE_IDLE) {
 
                         displayItems.get(start).startDownloadingImage();
-                        Log.i("start downloading image", " Position:" + start + ",pool size:" + ctr);
+                    Log.i("start downloading image", " Position:" + start + ",pool size:" + ctr);
 
                 }
                 else {
@@ -248,6 +248,9 @@ public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollLi
 
 
 
+    }
+
+    private void startDownloadingImages(){
 
     }
 
