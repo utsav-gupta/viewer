@@ -24,7 +24,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 
-//Author's Comment: This code fully complete as per the requirement  I have tested this code on samsung galaxy Android 4.4.4
+//Author's Comment: This code fully complete as per the requirement, including additional screen.  I have tested this code on samsung galaxy Android 4.4.4
 //and runs perfectly with 0 crashes.  -Utsav.
 
 
