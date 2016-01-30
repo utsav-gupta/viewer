@@ -42,6 +42,7 @@ public class MainActivity extends Activity {
          adapter  = new CustomAdapter(MainActivity.this);
          gridView.setAdapter(adapter);
         gridView.setOnScrollListener(adapter);
+        gridView.setOnItemClickListener(adapter);
 
 
     }

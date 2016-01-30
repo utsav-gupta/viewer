@@ -1,6 +1,7 @@
 package saltside.com.saltside;
 
 import android.app.Activity;
+import android.app.Dialog;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -13,7 +14,9 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
+import android.widget.AdapterView;
 import android.widget.BaseAdapter;
+import android.widget.Button;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -25,11 +28,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.concurrent.ThreadPoolExecutor;
 
-public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollListener{
+public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollListener, AdapterView.OnItemClickListener{
 
     private final Activity activity;
     private Thread thread;
@@ -37,22 +41,11 @@ public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollLi
 
     private  ArrayList<DisplayItem> displayItems;
     String [] result;
-    Context context;
+
     int [] imageId;
     private static LayoutInflater inflater=null;
     private int firstVisibleItem,visibleItemCount;
     private ArrayList<AsyncTask> asyncTasks;
-
-
-    public CustomAdapter(MainActivity mainActivity, ArrayList<DisplayItem> displayItems) {
-        this.activity=mainActivity;
-        inflater = ( LayoutInflater )activity.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        this.displayItems = displayItems;
-
-
-
-
-    }
 
 
     public CustomAdapter(MainActivity mainActivity) {
@@ -62,9 +55,9 @@ public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollLi
         displayItems = new ArrayList<DisplayItem>();
         asyncTasks = new ArrayList<AsyncTask>();
 
+
         dTask = new DownloadTask();
         thread = new Thread(dTask);
-
         thread.start();
 
     }
@@ -97,6 +90,7 @@ public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollLi
 
 
 
+
     public class Holder
     {
         TextView tv;
@@ -120,7 +114,7 @@ public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollLi
             holder= (Holder)rowView.getTag();
         }
         final DisplayItem displayItem = displayItems.get(position);
-        holder.tv.setText(displayItem.description);
+        holder.tv.setText(displayItem.description+"...");
         holder.titleView.setText(displayItem.title);
         displayItem.holder = holder;
         if(firstVisibleItem==0) {  //if the view is loaded for the first time and not yet scrolled
@@ -140,15 +134,7 @@ public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollLi
         }
      //   holder.img.setImageURI(Uri.parse(displayItems.get(position).image));
 
-       /* rowView.setOnClickListener(new OnClickListener() {
 
-            @Override
-            public void onClick(View v) {
-                // TODO Auto-generated method stub
-                Toast.makeText(activity, "You Clicked ", Toast.LENGTH_LONG).show();
-
-            }
-        });*/
 
         return rowView;
     }
@@ -275,5 +261,68 @@ public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollLi
 
 
     }
+
+    @Override
+    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        // custom dialog
+        final Dialog dialog = new Dialog(activity);
+        dialog.setContentView(R.layout.custom);
+        final DisplayItem item = displayItems.get(position);
+
+
+
+        new AsyncTask<Void,Void,Void>() {
+
+            Bitmap bmp ;
+            @Override
+            protected Void doInBackground(Void... params) {
+
+                URL url = null;
+                try {
+                    url = new URL(item.imageAddr);
+                    bmp = BitmapFactory.decodeStream(url.openConnection().getInputStream());
+
+                } catch (MalformedURLException e1) {
+                    e1.printStackTrace();
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+
+
+                return null;
+            }
+
+            @Override
+            protected void onPostExecute(Void aVoid) {
+                super.onPostExecute(aVoid);
+                final ImageView image = (ImageView) dialog.findViewById(R.id.image);
+                image.setImageBitmap(bmp);
+
+                dialog.setTitle("Title: "+item.title);
+
+                // set the custom dialog components - text, image and button
+                TextView text = (TextView) dialog.findViewById(R.id.text);
+                text.setText(item.description);
+            }
+        }.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+
+
+
+
+
+
+       Button dialogButton = (Button) dialog.findViewById(R.id.dialogButtonOK);
+        // if button is clicked, close the custom dialog
+        dialogButton.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.dismiss();
+            }
+        });
+
+        dialog.show();
+    }
+
+
 
 }
