@@ -131,7 +131,7 @@ public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollLi
 
         }
 
-        if(position==displayItems.size()-10) {//if list is nearing end start download items
+        if(position==displayItems.size()) {//if list end is reached
 
             synchronized (dTask) {
                 dTask.notify();
@@ -140,7 +140,7 @@ public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollLi
         }
      //   holder.img.setImageURI(Uri.parse(displayItems.get(position).image));
 
-        rowView.setOnClickListener(new OnClickListener() {
+       /* rowView.setOnClickListener(new OnClickListener() {
 
             @Override
             public void onClick(View v) {
@@ -148,7 +148,7 @@ public class CustomAdapter extends BaseAdapter implements AbsListView.OnScrollLi
                 Toast.makeText(activity, "You Clicked ", Toast.LENGTH_LONG).show();
 
             }
-        });
+        });*/
 
         return rowView;
     }
